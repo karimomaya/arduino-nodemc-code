@@ -105,7 +105,7 @@ String listNetworks() {
     
     }
 
-    json += "}";
+    json += "}]";
       
     return json;
 }
