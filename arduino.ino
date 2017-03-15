@@ -1,9 +1,11 @@
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h> 
 #include <ESP8266WebServer.h>
+#include <FS.h>
 
 const char *ssid = "kareem-arduino";
 const char *password = "123456789";
+boolean ifAP = true;
 
 ESP8266WebServer server(80);
 
@@ -11,29 +13,12 @@ void handleRoot() {
     response();
 }
 
-const String HtmlHtml = "<html><head>"
-    "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" /></head>";
-const String HtmlHtmlClose = "</html>";
-const String HtmlTitle = "<h1>List Of networks</h1><br/>\n";
-const String formOpen = "<br/><form action=\"http://192.168.4.1/submit\" method=\"POST\">";
-String comboBox = "<select name=\"wifiname\">";
-
-const String passwordTxt =  "Password: <input type=\"text\" name =\"password\">";
-const String buttonSubmit = "<input type=\"submit\" value=\"Submit\">";
-const String formClose = "</form><br>";
-
 void response(){
-  String htmlRes = HtmlHtml + HtmlTitle;
-  
-  htmlRes += formOpen;
-  htmlRes += comboBox;
-  htmlRes += passwordTxt;
-  htmlRes += buttonSubmit;
-  htmlRes += formClose;
-  
-  htmlRes += HtmlHtmlClose;
+  File file = SPIFFS.open("/index.html", "r");
+  size_t sent = server.streamFile(file, "text/html");
 
-  server.send(200, "text/html", htmlRes);
+  Serial.println(sent);
+  file.close();
 }
 
 void handleSubmit() {
@@ -46,49 +31,83 @@ void handleSubmit() {
   response();
 }
 
+void openDirectory(){
+   SPIFFS.begin();
+    {
+      Dir dir = SPIFFS.openDir("/");
+      while (dir.next()) {    
+        String fileName = dir.fileName();
+        size_t fileSize = dir.fileSize();
+        Serial.println(fileName);
+      }
+    }
+}
+
+IPAddress configureAP(){
+  WiFi.softAP(ssid, password);
+  return WiFi.softAPIP();
+}
+
+void logging(String msg) {
+  Serial.println(msg);
+}
+
 void setup() {
     delay(1000);
     Serial.begin(9600);
-    Serial.println();
+    
+    logging("Setup began");
+    
+    IPAddress apip = configureAP();
+    
+    openDirectory();
 
-    WiFi.softAP(ssid, password);
-
-    IPAddress apip = WiFi.softAPIP();
-    Serial.print("visit: \n");
-    Serial.println(apip);
+    
     server.on("/", handleRoot);
     server.on("/submit", handleSubmit);
+    server.on("/list_wifi", HTTP_GET, [](){
+      String json = listNetworks();
+      server.send(200, "text/json", json);
+      json = String();
+    });
+    
     server.begin();
-    Serial.println("HTTP server beginned");
-    listNetworks();
+    
+    logging("HTTP server beginned");
+    
 }
 
-void listNetworks() {
-  // scan for nearby networks:
-  Serial.println("** Scan Networks **");
-  int numSsid = WiFi.scanNetworks();
-  if (numSsid == -1) {
-    Serial.println("Couldn't get a wifi connection");
-    while (true);
-  }
+String listNetworks() {
+      // scan for nearby networks:
+      Serial.println("** Scan Networks **");
+      int numSsid = WiFi.scanNetworks();
+      if (numSsid == -1) {
+        Serial.println("Couldn't get a wifi connection");
+        while (true);
+      }
 
-  // print the list of networks seen:
-  Serial.print("number of available networks:");
-  Serial.println(numSsid);
+      // print the list of networks seen:
+      Serial.print("number of available networks:");
+      Serial.println(numSsid);
 
-  
-  // print the network number and name for each network found:
-  for (int thisNet = 0; thisNet < numSsid; thisNet++) {
+      String json = "[";
+      // print the network number and name for each network found:
+      for (int thisNet = 0; thisNet < numSsid; thisNet++) {
     
-    Serial.print(WiFi.SSID(thisNet));
+      Serial.print(WiFi.SSID(thisNet));
+      
+      if (thisNet == 0) {
+        json += "{\"name\":\""+WiFi.SSID(thisNet)+"\"";
+      }
+      else {
+        json += "},{\"name\":\""+WiFi.SSID(thisNet)+"\"";
+      }
     
-    comboBox += "<option value=";
-    comboBox += WiFi.SSID(thisNet);
-    comboBox += ">";
-    comboBox +=  WiFi.SSID(thisNet);
-    comboBox += "</option>" ;
-  }
-  comboBox += "</select>";
+    }
+
+    json += "}}";
+      
+    return json;
 }
 
 void loop() {
