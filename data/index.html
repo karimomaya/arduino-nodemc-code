@@ -1,0 +1,51 @@
+<html>
+<head>
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+</head>
+<body  onload="onBodyLoad()">
+	<h1>Karim </h1><br/>
+	<form action="http://192.168.4.1/submit" method="POST">
+		<select id="wifiList" name="wifiname">
+		</select>
+		Password: <input type="text" name ="password">
+		<input type="submit" value="Submit">
+	</form>
+	<br>
+
+	<script type="text/javascript">
+	function onBodyLoad() {
+		var xh;
+		if (window.XMLHttpRequest) {
+			// code for modern browsers
+			xh = new XMLHttpRequest();
+		 } else {
+			// code for old IE browsers
+			xh = new ActiveXObject("Microsoft.XMLHTTP");
+		}
+
+      	xh.onreadystatechange = function(){
+        if (xh.readyState == 4){
+          if(xh.status == 200) {
+            var networks = JSON.parse(xh.responseText);
+            console.log(networks);
+           
+            var select = document.getElementById('wifiList');
+            for(i = 0; i < networks.length; i++) {
+        		var opt = document.createElement("option");
+    			opt.value = networks[i].name;
+    			 console.log(select);
+    			opt.innerHTML = networks[i].name;
+    			select.appendChild(opt);
+    		}
+            
+          } 
+        }
+      };
+      xh.open("GET", "/list/list_wifi.js", true);
+      xh.send();
+	}
+	 
+	</script>
+
+</body>
+</html>
