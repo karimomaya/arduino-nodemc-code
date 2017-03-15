@@ -23,11 +23,30 @@ void response(){
 
 void handleSubmit() {
   if (server.args() > 0 ) {
+    char *wifi_password;
+    char *wifi_name;
     for ( uint8_t i = 0; i < server.args(); i++ ) {
+      if (server.argName(i) == "wifiname") {
+        wifi_name = strdup(server.arg(i).c_str());
+      }
+      else if (server.argName(i) == "password") {
+        wifi_password = strdup(server.arg(i).c_str());
+      }
       Serial.println(server.argName(i));
       Serial.println(server.arg(i));
-   }
-}
+    }
+    
+    WiFi.disconnect();
+    
+   
+    WiFi.begin(wifi_name, wifi_password);
+    while (WiFi.status() != WL_CONNECTED) {
+      delay(500);
+      Serial.print(".");
+    }
+    Serial.println(WiFi.localIP());
+    
+  }
   response();
 }
 
