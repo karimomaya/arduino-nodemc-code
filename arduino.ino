@@ -36,18 +36,29 @@ void handleSubmit() {
       Serial.println(server.arg(i));
     }
     
-    WiFi.disconnect();
-    
+   stopAPBeganSTA();
+   connectTOSTA(wifi_password,wifi_name);
    
-    WiFi.begin(wifi_name, wifi_password);
-    while (WiFi.status() != WL_CONNECTED) {
-      delay(500);
-      Serial.print(".");
-    }
-    Serial.println(WiFi.localIP());
-    
+   Serial.println(WiFi.localIP());
+   server.on("/", handleRoot);
+   server.begin();
   }
   response();
+}
+
+public void connectTOSTA(char *wifi_password, char *wifi_name){
+   WiFi.begin(wifi_name, wifi_password);
+   while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+   }
+}
+
+public void stopAPBeganSTA(){
+   server.stop(); 
+    WiFi.disconnect();
+    WiFi.mode(WIFI_OFF);
+    WiFi.mode(WIFI_STA);
 }
 
 void openDirectory(){
