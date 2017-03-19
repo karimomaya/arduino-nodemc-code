@@ -1,6 +1,7 @@
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h> 
 #include <ESP8266WebServer.h>
+#include <ESP8266HTTPUpdateServer.h>
 #include <FS.h>
 #include <RServer.h>
 
@@ -81,6 +82,6 @@ bool RServer::connectSTA(RConfig& config){
 bool checkPermission(){
 	return true;
 }
-void RServer::logging(String msg){
+void RServer::logging(String& msg){
 	
 }

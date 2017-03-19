@@ -3,18 +3,20 @@
 
 #define _OPEN_ROBOT_H_
 
-#define RCONFIG_ENABLE_AP				1
-#define RCONFIG_FIXED_AP_IP				2
-#define RCONFIG_ENABLE_AP_IF_NO_STA		4
-#define RCONFIG_ENABLE_STA				8
-#define RCONFIG_FIXED_STA_IP			16
+#define RCONFIG_VER						0x01
+#define RCONFIG_ENABLE_AP				0x01
+#define RCONFIG_FIXED_AP_IP				0x02
+#define RCONFIG_ENABLE_AP_IF_NO_STA		0x04
+#define RCONFIG_ENABLE_STA				0x08
+#define RCONFIG_FIXED_STA_IP			0x10
 
 #define RECONFIG_DEF_AP_NAME		"kareem-arduino"
 #define RECONFIG_DEF_AP_PASSWORD	"123456789"	
 
 struct RConfig{
+	int  ver;
 	int  flags;
-	char STAName[16];
+	char STAName[16];//wifiName
 	char STAPassword[16];
 	char APName[16];
 	char APPassword[16];
@@ -51,7 +53,7 @@ private:
 	IPAddress configureAP(RConfig& config);
 	bool connectSTA(RConfig& config);
 	
-	void logging(String msg);
+	void logging(String& msg);
 };
 
 #endif 
