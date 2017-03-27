@@ -18,7 +18,7 @@
 
 struct RConfig{
 	int  ver;
-	int  flags;
+	int  flags = 0x01;
 	char STAName[16];//wifiName
 	char STAPassword[16];
 	char APName[16];
@@ -46,8 +46,8 @@ private:
 	ESP8266HTTPUpdateServer	updateServer;
 	RConfig 				config;
 	
-	bool loadConfig(RConfig& config);
-	void saveConfig(RConfig& config);
+	bool loadConfig();
+	void saveConfig();
 	
 	void registerRequestHandlers();
 
@@ -56,13 +56,14 @@ private:
 	static void handleWifiSubmittion();
 	static void handleSaveConfig();
 	static void handleGetConfig();
-	static void stopAP();
+	static void stopWifi();
 	
 	String listAvailableWIFI();
 	bool checkPermission();
+	void configSTA();
 	
-	IPAddress configureAP(RConfig& config);
-	bool connectSTA(RConfig& config);
+	IPAddress configureAP();
+	bool connectSTA();
 	
 	void logging(const char* msg);
 };
