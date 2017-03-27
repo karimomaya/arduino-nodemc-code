@@ -5,23 +5,28 @@ RServer::RServer(int port):webServer(port){
 
 	delay(1000);// is this required?
 	pThis = this;
-	
+
 	updateServer.setup(&webServer);
 }
 
 void RServer::setupServer() {
-	openDirectory();
+	pThis->openDirectory();
 	
-	loadConfig(config);
+	pThis->loadConfig();
 	
 	bool bconnected=false;
-	if(config.flags & RCONFIG_ENABLE_STA)
-		bconnected = connectSTA(config);
-	if(config.flags & RCONFIG_ENABLE_AP || (!bconnected && (config.flags & RCONFIG_ENABLE_AP_IF_NO_STA)))
-		configureAP(config);
+	pThis->logging("Setup");
+	if(pThis->config.flags & RCONFIG_ENABLE_STA){
+		pThis->logging("coonect STA");
+		bconnected = connectSTA();
+	}
+	if(pThis->config.flags & RCONFIG_ENABLE_AP || (!bconnected && (pThis->config.flags & RCONFIG_ENABLE_AP_IF_NO_STA))){
+		pThis->logging("coonect AP");
+		pThis->configureAP();
+	}
 
-	registerRequestHandlers();
-	begin();
+	pThis->registerRequestHandlers();
+	
 }
 
 void RServer::begin(){
@@ -41,21 +46,23 @@ void RServer::stop(){
 }
 
 //try to load config from config file if can't load default config
-bool RServer::loadConfig(RConfig& config){
+bool RServer::loadConfig(){
 	
 	if(SPIFFS.exists("/config.txt")){
+		logging("load configuration file");
 		File file = SPIFFS.open("/config.txt", "r");
-		file.read((uint8_t*)&config, sizeof(RConfig));
+		file.read((uint8_t*)&pThis->config, sizeof(RConfig));
 		file.close();
 		return true;
 	}
+	logging("there's no configuration file");
 	return false;
 }
 
 //save config to config file
-void RServer::saveConfig(RConfig& config){
+void RServer::saveConfig(){
 	File file = SPIFFS.open("/config.txt", "w");
-	file.write((uint8_t*)&config, sizeof(RConfig));
+	file.write((uint8_t*)&pThis->config, sizeof(RConfig));
 	file.close();
 }
 
@@ -63,6 +70,7 @@ void RServer::saveConfig(RConfig& config){
 void RServer::openDirectory() {
 	SPIFFS.begin();
     Dir dir = SPIFFS.openDir("/");
+    logging("open directory");
 }
 
 
@@ -80,6 +88,8 @@ void RServer::registerRequestHandlers(){
 		  pThis->webServer.send(200, "text/json", json);
 		  json = String();
     });
+
+    logging("Register request handling");
 }
 
 String RServer::listAvailableWIFI() {
@@ -122,7 +132,7 @@ void RServer::handleWifiSubmittion() {
 			return;
 		
 	if (pThis->webServer.args() < 2 ) 
-		return;
+			return;
     
     for ( uint8_t i = 0; i < pThis->webServer.args(); i++ ) {
       if (pThis->webServer.argName(i) == "wifiname") {
@@ -133,14 +143,16 @@ void RServer::handleWifiSubmittion() {
       }
     }
 
-    pThis->stopAP();
-    pThis->connectSTA(pThis->config);
+   
+    if (!pThis->connectSTA())
+    	pThis->configureAP();
+    	
+    pThis->saveConfig();
     pThis->registerRequestHandlers();
- 
+ 	
 }
 
-void RServer::stopAP() {
-	pThis->stop();
+void RServer::stopWifi() {
 	WiFi.disconnect();
     WiFi.mode(WIFI_OFF);
 }
@@ -160,22 +172,37 @@ void RServer::handleGetConfig(){
 }
 
 
-IPAddress RServer::configureAP(RConfig& config){
-
+IPAddress RServer::configureAP(){
+	pThis->stopWifi();
+	WiFi.mode(WIFI_AP);
 	WiFi.softAP(pThis->config.STAName, pThis->config.STAPassword);
+	begin();
   	return WiFi.softAPIP();
 }
 
 //if connected to wifi return true
-bool RServer::connectSTA(RConfig& config){
-	WiFi.mode(WIFI_STA);
-	WiFi.begin(pThis->config.STAName, pThis->config.STAPassword);
+bool RServer::connectSTA(){
+
+	pThis->configSTA();
+	int timeOut = 0;
    	while (WiFi.status() != WL_CONNECTED) {
     	delay(500);
     	Serial.print(".");
+    	if(timeOut == 20)
+    		return false;
+    	timeOut++;
    	}
+
+   	pThis->config.flags = 0x08;
    	Serial.println(WiFi.localIP());
 	return true;
+}
+
+void RServer::configSTA() {
+	pThis->stop();
+	pThis->stopWifi();
+	WiFi.mode(WIFI_STA);
+	WiFi.begin(pThis->config.STAName, pThis->config.STAPassword);
 }
 
 bool RServer::checkPermission(){
